@@ -102,6 +102,7 @@
 
   <div id="controls">
     <div class="btn" id="bAlign">対角整列 M</div>
+    <div class="btn on" id="bFol">花模様 F</div>
     <div class="btn on" id="bRot">自動回転 A</div>
     <div class="btn" id="bPal">彩 P</div>
     <div class="btn" id="bSnd">音 S</div>
@@ -130,6 +131,7 @@
     <table>
       <tr><td class="k">1 – 5</td><td>各立体の表示切替</td></tr>
       <tr><td class="k">M</td><td>体対角線ビューへ整列</td></tr>
+      <tr><td class="k">F</td><td>整列時の花模様(13円)の表示切替</td></tr>
       <tr><td class="k">A / P / S</td><td>自動回転 / 配色 / 音</td></tr>
       <tr><td class="k">クリック</td><td>波動を放つ</td></tr>
     </table>
@@ -552,7 +554,7 @@ const state={
   theta:rad(28),phi:rad(16),
   tTheta:rad(28),tPhi:rad(16),
   dist:5.2,tDist:5.2,
-  auto:true,pal:0,
+  auto:true,pal:0,fol:1,folMix:1,
   vis:{hexa:1,tetra:1,octa:1,icosa:1,dodeca:1},
   alpha:{hexa:1,tetra:1,octa:1,icosa:1,dodeca:1},
   snap:null,
@@ -705,6 +707,7 @@ window.addEventListener('keydown',e=>{
   const s=SOLIDS.find(s=>s.key===k);
   if(s)toggleSolid(s.id);
   else if(k==='m')snapTo();
+  else if(k==='f'){state.fol=state.fol?0:1;syncBtns();Snd.pluck(state.fol?698.46:349.23);}
   else if(k==='a'){state.auto=!state.auto;syncBtns();}
   else if(k==='p'){state.pal=(state.pal+1)%PALETTES.length;applyPal();Snd.pluck(659.26);}
   else if(k==='s')Snd.toggle();
@@ -740,12 +743,14 @@ function applyPal(){
 function syncBtns(){
   document.getElementById('bRot').classList.toggle('on',state.auto);
   document.getElementById('bSnd').classList.toggle('on',state.sound);
+  document.getElementById('bFol').classList.toggle('on',state.fol);
 }
 applyPal();
 if(window.matchMedia&&matchMedia('(pointer:coarse)').matches){
   document.getElementById('hint').textContent='ドラッグ 回転 · ピンチ 遠近 · 対角整列ボタンでメタトロンへ';
 }
 document.getElementById('bAlign').addEventListener('click',snapTo);
+document.getElementById('bFol').addEventListener('click',()=>{state.fol=state.fol?0:1;syncBtns();Snd.pluck(state.fol?698.46:349.23);});
 document.getElementById('bRot').addEventListener('click',()=>{state.auto=!state.auto;syncBtns();});
 document.getElementById('bPal').addEventListener('click',()=>{state.pal=(state.pal+1)%PALETTES.length;applyPal();Snd.pluck(659.26);});
 document.getElementById('bSnd').addEventListener('click',()=>Snd.toggle());
@@ -846,7 +851,8 @@ function frame(now){
   curView=lookAt(curEye,[0,0,0],[0,1,0]);
   const proj=persp(curFov,W/H,.1,distR+300);
 
-  const ovA=Math.pow(clamp(1-angDeg/5,0,1),1.6);
+  state.folMix+=(state.fol-state.folMix)*(1-Math.pow(.004,dt));
+  const ovA=Math.pow(clamp(1-angDeg/5,0,1),1.6)*state.folMix;
 
   // solid alpha fades
   for(const s of SOLIDS){
